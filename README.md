@@ -18,4 +18,15 @@ Check that the installation worked:
 python3 -c "import cityflow"
 ```
 
-3. [TODO: more instructions]
+3. Download the required data via:
+```bash
+cd /src
+./get-data.sh
+```
+
+
+## Usage
+
+Run `driver.py`.
+This should produce replay files for each subdirectory inside of `data`.
+These can be viewed using CityFlow's frontend.

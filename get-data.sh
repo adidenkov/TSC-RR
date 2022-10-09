@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+# Create a data directory and populate with datasets.
 mkdir -p data
 cd data
 dl () { wget -nc -O $1 https://raw.githubusercontent.com/$2; }
