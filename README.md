@@ -7,11 +7,13 @@
 
 1. Clone this repository.
 
-2. [Install CityFlow](https://cityflow.readthedocs.io/en/latest/install.html).
-The supported way is through their pre-made Docker image:
+2. [Install CityFlower](https://github.com/ChaseDVickery/CityFlower).
+The supported way is through building a Docker image:
 ```bash
-docker pull cityflowproject/cityflow:latest
-docker run -it -v /path/to/TSC-RR:/src cityflowproject/cityflow:latest
+git clone git@github.com:ChaseDVickery/CityFlower.git
+cd CityFlower
+docker build -t cityflower .
+docker run -it -v /path/to/TSC-RR:/src cityflower:latest
 ```
 Check that the installation worked:
 ```bash
