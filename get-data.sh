@@ -33,15 +33,15 @@ up 12-jinan
 # Generated from taxicab trajectories
 mkdir -p 48-manhattan
 dl 48-manhattan/roadnet.json traffic-signal-control/sample-code/master/data/manhattan_16x3/roadnet_16_3.json
-dl 48-manhattan/flow.json traffic-signal-control/sample-code/master/data/manhattan_16x3/anon_16_3_newyork_real.json 
+dl 48-manhattan/flow.json traffic-signal-control/sample-code/master/data/manhattan_16x3/anon_16_3_newyork_real.json
 up 48-manhattan
 
 mkdir -p 196-manhattan
 dl 196-manhattan/roadnet.json traffic-signal-control/sample-code/master/data/manhattan_28x7/roadnet_28_7.json
-dl 196-manhattan/flow.json traffic-signal-control/sample-code/master/data/manhattan_28x7/anon_28_7_newyork_real_double.json 
+dl 196-manhattan/flow.json traffic-signal-control/sample-code/master/data/manhattan_28x7/anon_28_7_newyork_real_triple.json
 up 196-manhattan
 
 mkdir -p 2510-manhattan
 dl 2510-manhattan/roadnet.json Chacha-Chen/MPLight/master/data/manhattan/manhattan.json
-dl 2510-manhattan/flow.json Chacha-Chen/MPLight/master/data/manhattan/manhattan_7846.json 
+dl 2510-manhattan/flow.json Chacha-Chen/MPLight/master/data/manhattan/manhattan_31217.json
 up 2510-manhattan
