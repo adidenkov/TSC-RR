@@ -1,0 +1,21 @@
+{
+    "id": "intersection_sidewalk_",
+    "point": {
+      "x": 0,
+      "y": 0
+    },
+    "width": 10,
+    "roads": [],
+    "roadLinks": [],
+    "trafficLight": {
+      "roadLinkIndices": [],
+      "lightphases": [
+        {
+          "time": 5,
+          "availableRoadLinks": []
+        }
+      ]
+    },
+    "virtual": false,
+    "sidewalk": true
+  }
