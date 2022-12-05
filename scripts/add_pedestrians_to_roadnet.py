@@ -13,6 +13,13 @@ from copy import deepcopy
 #   3. For each road in roads, find those that are "parallel". Find roads where points[0] and points[1] are switched (swapped start/end coordinates)
 #   4. 
 
+split_idx = 0
+
+standard_lightphase = {
+    "time": -1,
+    "availableRoadLinks": []
+}
+
 def get_angle(cornerx, cornery, x1, y1, x2, y2):
     v1 = (x1-cornerx, y1-cornery)
     v2 = (x2-cornerx, y2-cornery)
@@ -33,6 +40,29 @@ def is_clump_in_list(clump, clumplist):
     
     return False
 
+# t should be between 0 and 1 (inclusive)
+def lerp(start_num, end_num, t):
+    return (t * (end_num-start_num)) + start_num
+
+def get_road_connection_points(intersection, start, end, num_points):
+    start_vec = (start["points"][0]["x"]-start["points"][1]["x"], start["points"][0]["y"]-start["points"][1]["y"])
+    end_vec = (end["points"][1]["x"]-end["points"][0]["x"], end["points"][1]["y"]-end["points"][0]["y"])
+    ipt = (intersection["point"]["x"], intersection["point"]["y"])
+    # Get the 2 points that are in direction of each lane (going away from intersection) by intersection width
+    start_direction = math.atan2(start_vec[1], start_vec[0])
+    end_direction = math.atan2(end_vec[1], end_vec[0])
+    start_point = (ipt[0] + intersection["width"]*math.cos(start_direction), ipt[1] + intersection["width"]*math.sin(start_direction))
+    end_point = (ipt[0] + intersection["width"]*math.cos(end_direction), ipt[1] + intersection["width"]*math.sin(end_direction))
+    # Just linearly interpolate between start and end by num_points
+    points = []
+    for i in range(num_points):
+        points.append({
+            "x": lerp(start_point[0], end_point[0], float(i)/num_points),
+            "y": lerp(start_point[1], end_point[1], float(i)/num_points)
+        })
+    
+    return points
+
 # Returns a list of road's start and end points: [(startx, starty), (endx, endy)]
 def get_roadpoints(road):
     return [(road["points"][0]["x"], road["points"][0]["y"]), (road["points"][1]["x"], road["points"][1]["y"])]
@@ -51,6 +81,203 @@ class ClumpInfo:
         self.points = points
         self.matching_intersections1
         self.matching_intersections2
+
+class Crosswalk:
+    def __init__(self, swi1, swi2, ri1, ri2, crossing_clump, sw1, sw2, main_intersection):
+        self.swi1 = swi1
+        self.swi2 = swi2
+        self.ri1 = ri1
+        self.ri2 = ri2
+        self.crossing_clump = crossing_clump
+        self.sw1 = sw1
+        self.sw2 = sw2
+        self.main_intersection = main_intersection
+
+    def __str__(self) -> str:
+        s = ""
+        s += "Crosswalk:\n"
+        s += "\tSidewalk Crossings: {}, {}\n".format(self.swi1["id"], self.swi2["id"])
+        s += "\tRoad Intersections: {}, {}".format(self.ri1["id"], self.ri2["id"])
+        return s
+
+    # After 1 road has been split on a crosswalk, 
+    # this should alter the endpoint of other crosswalks that have not been created/split roads.
+    # So, this helps us find and replace old road intersections with the new crosswalk intersections.
+    def update_intersection(self, old_id, new_intersection):
+        if (self.ri1["id"] == old_id):
+            self.ri1 = new_intersection
+        if (self.ri2["id"] == old_id):
+            self.ri2 = new_intersection
+        if (self.swi1["id"] == old_id):
+            self.swi1 = new_intersection
+        if (self.swi2["id"] == old_id):
+            self.swi2 = new_intersection
+
+    # Detects if 
+    def correct_incoming_roads_from(self, other_crosswalk, old_road_id_to_new_road_split):
+        # if self.does_share_clump(other_crosswalk):
+        # for road in self.crossing_clump:
+        #     if road[""]
+        print(self.main_intersection["id"])
+        print("\tOld clump roads: {}".format([r["id"] for r in self.crossing_clump]))
+        self.crossing_clump = [r if r["id"] not in old_road_id_to_new_road_split else old_road_id_to_new_road_split[r["id"]] for r in self.crossing_clump]
+        print("\tNew clump roads: {}".format([r["id"] for r in self.crossing_clump]))
+
+    # Just returns midpoint of 2 sidewalk intersections
+    def intersect_position(self):
+        return ((self.swi1["point"]["x"] + self.swi2["point"]["x"]) / 2, (self.swi1["point"]["y"] + self.swi2["point"]["y"]) / 2)
+
+    def does_share_clump(self, other) -> bool:
+        my_ids = [x["id"] for x in self.crossing_clump]
+        other_ids = [x["id"] for x in other.crossing_clump]
+        return set(my_ids) == set(other_ids)
+
+    def get_intersections_of_road(self, road):
+        start_intersection = None
+        end_intersection = None
+        # print(str(self))
+        # print("Road start intersection: {}".format(road["startIntersection"]))
+        # print("Road end intersection: {}".format(road["endIntersection"]))
+        if road["startIntersection"] == self.swi1["id"]:
+            start_intersection = self.swi1
+        elif road["startIntersection"] == self.swi2["id"]:
+            start_intersection = self.swi2
+        elif road["startIntersection"] == self.ri1["id"]:
+            start_intersection = self.ri1
+        elif road["startIntersection"] == self.ri2["id"]:
+            start_intersection = self.ri2
+        # else:
+        #     for r in self.crossing_clump:
+        #         if road["startIntersection"] == r["id"]:
+        #             start_intersection = r
+        #             break
+        if road["endIntersection"] == self.swi1["id"]:
+            end_intersection = self.swi1
+        elif road["endIntersection"] == self.swi2["id"]:
+            end_intersection = self.swi2
+        elif road["endIntersection"] == self.ri1["id"]:
+            end_intersection = self.ri1
+        elif road["endIntersection"] == self.ri2["id"]:
+            end_intersection = self.ri2
+        # else:
+        #     for r in self.crossing_clump:
+        #         if road["endIntersection"] == r["id"]:
+        #             end_intersection = r
+        #             break
+
+        # print((start_intersection, end_intersection))
+        return (start_intersection, end_intersection)
+
+
+class RoadSplitter:
+    def __init__(self, split_intersection, crosswalk):
+        # self.road = road
+        self.crosswalk = crosswalk
+        self.split_intersection = split_intersection
+        self.road_splits = []
+        self.outgoing_road_id_to_new_road_split = {}
+        # self.create_split()
+
+    def num_lanes(self):
+        lanes = 0
+        for r in self.crosswalk.crossing_clump:
+            lanes += 2*len(r["lanes"])
+        lanes += len(self.crosswalk.sw1["lanes"])
+        lanes += len(self.crosswalk.sw2["lanes"])
+        return lanes
+
+    def split(self):
+        to_split = [self.crosswalk.sw1, self.crosswalk.sw2, *self.crosswalk.crossing_clump]
+        # to_split = [x for x in to_split if self.crosswalk.main_intersection["id"] == x["startIntersection"]]
+        # print(len(to_split))
+        c = 0
+        for r in to_split:
+            self.split_road(r)
+            c += 1
+            # print("Split road {} ({}/{}) at crosswalk {}".format(r["id"], c, len(to_split), self.crosswalk))
+
+        # Create traffic lights
+        num_lanes = self.num_lanes()
+        # self.split_intersection["trafficLight"]["roadLinkIndices"] = [i for i in range(num_lanes)]
+        self.split_intersection["trafficLight"]["roadLinkIndices"] = [i for i in range(4)]
+        self.split_intersection["trafficLight"]["lightphases"] = []
+        # First 4 lanes should be the sidewalk lanes
+        phase = deepcopy(standard_lightphase)
+        phase["time"] = 30
+        phase["availableRoadLinks"].extend([i for i in range(2)])
+        self.split_intersection["trafficLight"]["lightphases"].append(phase)
+        # The rest of the phases are the road lanes
+        phase = deepcopy(standard_lightphase)
+        phase["time"] = 30
+        phase["availableRoadLinks"].extend([i for i in range(2, 4)])
+        self.split_intersection["trafficLight"]["lightphases"].append(phase)
+
+    def add_road_splits_to_roads(self, roads):
+        roads.extend(self.road_splits)
+
+    def split_road(self, road):
+        start_intersection, end_intersection = self.crosswalk.get_intersections_of_road(road)
+        # print(road)
+        # print(start_intersection["id"])
+        # print(end_intersection["id"])
+        # if (start_intersection == None or end_intersection == None):
+        #     print("------------- DUMP CROSSWALK INFO --------------")
+        #     print("SWI1: {}\n".format(self.crosswalk.swi1))
+        #     print("SWI2: {}\n".format(self.crosswalk.swi2))
+        #     print("RI1: {}\n".format(self.crosswalk.ri1))
+        #     print("RI2: {}\n".format(self.crosswalk.ri2))
+
+        road_split = deepcopy(road)
+        self.road_splits.append(road_split)
+        old_id = road_split["id"]
+        global split_idx
+        road_split["id"] = road_split["id"] + "_split" + str(split_idx)
+        split_idx += 1
+        # Change the sidewalk intersection road IDs to match the new road
+        # Roads for start_intersection do not change (because the start road id does not change)
+        # Road IDs for end_intersection must be updated to this new split that replaces the old road id
+        # end_intersection["roads"] = [s.replace(old_id, road_split["id"]) for s in end_intersection["roads"]]
+        end_intersection["roads"] = [s if old_id != s else road_split["id"] for s in end_intersection["roads"]]
+        # print("Updated end intersection {} road {} to new split road {}".format(end_intersection["id"], old_id, road_split["id"]))
+        for link in end_intersection["roadLinks"]:
+            # link["startRoad"] = link["startRoad"].replace(old_id, road_split["id"])
+            # link["endRoad"] = link["endRoad"].replace(old_id, road_split["id"])
+            link["startRoad"] = link["startRoad"] if link["startRoad"] != old_id else road_split["id"]
+            link["endRoad"] = link["endRoad"] if link["endRoad"] != old_id else road_split["id"]
+        # Change the end intersection of original road to be the split intersection
+        road["points"][1]["x"] = self.split_intersection["point"]["x"]
+        road["points"][1]["y"] = self.split_intersection["point"]["y"]
+        road["endIntersection"] = self.split_intersection["id"]
+        # Change the start intersection of original road to be the split intersection
+        road_split["points"][0]["x"] = self.split_intersection["point"]["x"]
+        road_split["points"][0]["y"] = self.split_intersection["point"]["y"]
+        road_split["startIntersection"] = self.split_intersection["id"]
+        # if (road["id"] == "road_1_1_1"):
+        #     print(road)
+        #     print(road_split)
+        # Modify split intersection to just "go straight" between these two roads
+        new_roadlink = deepcopy(standard_roadlink)
+        new_roadlink["type"] = "go_straight"
+        new_roadlink["startRoad"] = road["id"]
+        new_roadlink["endRoad"] = road_split["id"]
+        # default_points = new_roadlink["laneLinks"][0]["points"]
+        default_points = get_road_connection_points(self.split_intersection, road, road_split, 6)
+        new_roadlink["laneLinks"].clear()
+        for lane_idx in range(len(road["lanes"])):
+            for l in range(len(road["lanes"])):
+                # new_roadlink["laneLinks"].append({"startLaneIndex": 1, "endLaneIndex": 0, "points": default_points})
+                new_roadlink["laneLinks"].append({"startLaneIndex": lane_idx, "endLaneIndex": l, "points": default_points})
+
+        # THE NEW ROAD IS ALWAYS THE ONE THAT GOES OUT FROM THE CROSSWALK'S MAIN INTERSECTION
+        # THEREFORE: KEEP TRACK OF WHICH OUTGOING ROADS TO UPDATE FOR LATER
+        if self.crosswalk.main_intersection["id"] != end_intersection["id"]:
+            self.outgoing_road_id_to_new_road_split[old_id] = road_split
+
+        self.split_intersection["roads"].append(road["id"])
+        self.split_intersection["roads"].append(road_split["id"])
+        self.split_intersection["roadLinks"].append(new_roadlink)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Add "sidewalks" to roadnet file.')
@@ -98,6 +325,7 @@ if __name__ == "__main__":
         all_clumps = []
         clump_info = []
         crosswalks = []
+        crosswalk_objects = []
         for intersection in true_intersections:
             if intersection["id"] in debug_intersection_ids:
                 debug_print = True
@@ -201,7 +429,9 @@ if __name__ == "__main__":
             for position in sidewalk_intersect_positions:
                 angle = math.atan2(position[1]-location_avg[1], position[0]-location_avg[0])
                 # radius = 1*clump_widths[i]
-                offset = 22
+                # offset = 22
+                offset = 54
+                # offset = 100
                 x = position[0] + (offset*math.cos(angle))
                 y = position[1] + (offset*math.sin(angle))
                 new_sidewalk_intersection_positions.append((x,y))
@@ -221,7 +451,7 @@ if __name__ == "__main__":
                 new_sidewalk_intersections.append(new_sidewalk_intersection)
                 intersections.append(new_sidewalk_intersection)
 
-            # Make new sidewalks at intersections
+            # Make new crosswalks at intersections
             new_sidewalks = []
             for i in range(len(new_sidewalk_intersections)):
                 adjacent_idx = (i+1) % len(new_sidewalk_intersections)
@@ -237,6 +467,7 @@ if __name__ == "__main__":
                 new_sidewalk["endIntersection"] = new_sidewalk_intersections[adjacent_idx]["id"]
 
                 sidewalk_count += 1
+                sw1 = new_sidewalk
                 new_sidewalks.append(new_sidewalk)
                 crosswalks.append(new_sidewalk)
                 roadnet_json["roads"].append(new_sidewalk)
@@ -249,13 +480,17 @@ if __name__ == "__main__":
                 new_sidewalk["points"][0]["y"] = startpos["y"]
                 new_sidewalk["points"][1]["x"] = endpos["x"]
                 new_sidewalk["points"][1]["y"] = endpos["y"]
-                new_sidewalk["startIntersection"] = new_sidewalk_intersections[i]["id"]
-                new_sidewalk["endIntersection"] = new_sidewalk_intersections[adjacent_idx]["id"]
+                new_sidewalk["startIntersection"] = new_sidewalk_intersections[adjacent_idx]["id"]
+                new_sidewalk["endIntersection"] = new_sidewalk_intersections[i]["id"]
 
                 sidewalk_count += 1
+                sw2 = new_sidewalk
                 new_sidewalks.append(new_sidewalk)
                 crosswalks.append(new_sidewalk)
                 roadnet_json["roads"].append(new_sidewalk)
+
+                crosswalk_objects.append(Crosswalk(new_sidewalk_intersections[i], new_sidewalk_intersections[adjacent_idx], intersections_dict[clump_intersect_points[adjacent_idx][5][0]["startIntersection"]], intersections_dict[clump_intersect_points[adjacent_idx][5][0]["endIntersection"]], clump_intersect_points[adjacent_idx][5], sw1, sw2, intersection))
+
             
             if debug_print:
                 print("New Sidewalks: {}".format(new_sidewalks))
@@ -335,6 +570,7 @@ if __name__ == "__main__":
 
 
         all_new_sidewalks = connectors + crosswalks
+        all_new_sidewalks_dict = {s["id"]: s for s in all_new_sidewalks}
         for sidewalk_info in all_sidewalk_intersection_info:
             # Add sidewalks as roads for intersection
             incoming = []
@@ -355,6 +591,8 @@ if __name__ == "__main__":
                     new_roadlink = deepcopy(standard_roadlink)
                     new_roadlink["startRoad"] = i
                     new_roadlink["endRoad"] = o
+                    new_roadlink["laneLinks"][0]["points"].clear()
+                    new_roadlink["laneLinks"][0]["points"] = get_road_connection_points(sidewalk_intersection, all_new_sidewalks_dict[i], all_new_sidewalks_dict[o], 6)
                     roadLinks.append(new_roadlink)
                     num_links += 1
             
@@ -454,6 +692,60 @@ if __name__ == "__main__":
             if (count%20 == 0):
                 # print("{}/{} Roads connected.".format(count, roads_to_do))
                 print("{}/{} Clumps connected.".format(count, clumps_to_do))
+
+        crosswalk_intersections = []
+        to_update = [x for x in crosswalk_objects]
+        # Create crosswalk intersections that force interaction between roads and sidewalks
+        print("# Crosswalks: {}".format(len(crosswalk_objects)))
+        for crosswalk in crosswalk_objects:
+            # For each sidewalk, create a new intersection at the point where the clump and crosswalk meet
+            # The only kind of turn here should be "go_straight" to prevent cars from turning on sidewalks and pedestrians from turning on roads
+            position = crosswalk.intersect_position()
+            
+            crosswalk_intersection = deepcopy(standard_sidewalk_intersection)
+            crosswalk_intersection["id"] = crosswalk_intersection["id"] + str(sidewalk_intersection_count) + "_crosswalk"
+            crosswalk_intersection["point"]["x"] = position[0]
+            crosswalk_intersection["point"]["y"] = position[1]
+            crosswalk_intersection["sidewalk"] = False
+
+            splitter = RoadSplitter(crosswalk_intersection, crosswalk)
+            splitter.split()
+            splitter.add_road_splits_to_roads(roadnet_json["roads"])
+
+            print(crosswalk.main_intersection["id"])
+            print({r: splitter.outgoing_road_id_to_new_road_split[r]["id"] for r in splitter.outgoing_road_id_to_new_road_split})
+
+            # Update some intersection of neighboring crosswalks with newly created crosswalk intersection if need be
+            to_update.remove(crosswalk)
+            # associated_crosswalk is the crosswalk down near the other intersection
+            associated_crosswalks = [x for x in to_update if crosswalk.does_share_clump(x)]
+            for c in associated_crosswalks:
+                # main_intersection refers to the road intersection around which the crosswalk was placed
+                # Use this to update the other crosswalks that used this main_intersection as an endpoint
+                # with the newly created crosswalk intersection
+                c.update_intersection(crosswalk.main_intersection["id"], crosswalk_intersection)
+                # If the updated road(s) is outgoing, then we need to replace the road in the clump with the
+                # newly created split road for relevant associated crosswalks
+                c.correct_incoming_roads_from(crosswalk, splitter.outgoing_road_id_to_new_road_split)
+
+
+            # # With the new crosswalk intersection, we need to split the existing roads
+            # sw1split = deepcopy(crosswalk.sw1)
+            # sw2split = deepcopy(crosswalk.sw2)
+
+            # # Add all relevant road IDs to intersection's roads
+            # crosswalk_intersection["roads"].append(crosswalk.sw1)
+            # crosswalk_intersection["roads"].append(crosswalk.sw2)
+            # for road in crosswalk.crossing_clump:
+            #     crosswalk_intersection["roads"].append(road["id"])
+
+            
+
+
+            sidewalk_intersection_count += 1
+            crosswalk_intersections.append(crosswalk_intersection)
+            intersections.append(crosswalk_intersection)
+
 
 
         with open(args.output, "w") as o:
