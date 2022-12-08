@@ -5,6 +5,7 @@ import argparse
 import random
 
 if __name__ == "__main__":
+    random.seed(5834)
     parser = argparse.ArgumentParser(description='Add "passengers" parameter to all vehicles in flow file.')
     parser.add_argument('input', help="The original flow file to which passengers will be added.")
     parser.add_argument('-o', '--output', help="The name of the new flow file (default=<input>_passengers.json).")

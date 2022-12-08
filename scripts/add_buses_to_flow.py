@@ -6,6 +6,7 @@ import random
 from copy import deepcopy
 
 if __name__ == "__main__":
+    random.seed(5834)
     parser = argparse.ArgumentParser(description='Copies random car flows and turns them into "busses". NOTE: This means that there should be at least n flows specified if up to n busses are desired.')
     parser.add_argument('input', help="The original flow file which should INCLUDE PASSENGERS.")
     parser.add_argument('-o', '--output', help="The name of the new flow file (default=<input>_buses.json).")

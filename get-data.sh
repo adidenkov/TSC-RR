@@ -4,7 +4,7 @@ SRC=$(pwd)
 mkdir -p data
 cd data
 dl () { wget -nc -O $1 https://raw.githubusercontent.com/$2; }
-up () { python3 $SRC/scripts/add_passengers_to_flow.py $1/flow.json -o $1/flow.json; }
+up () { python3 $SRC/scripts/add_passengers_to_flow.py $1/flow.json -o $1/flow.json --random; }
 
 # Small example from CityFlow
 mkdir -p 1-example

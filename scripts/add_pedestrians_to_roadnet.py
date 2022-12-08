@@ -2,7 +2,6 @@
 import sys
 import json
 import argparse
-import random
 import math
 
 from copy import deepcopy

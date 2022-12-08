@@ -14,6 +14,7 @@ def get_available_sidewalks(current_sidewalk, roadnet, exclude_ids):
 
 
 if __name__ == "__main__":
+    random.seed(5834)
     parser = argparse.ArgumentParser(description='Adds random pedestrian flows on sidewalks.')
     parser.add_argument('input', help="The original flow file which should INCLUDE PASSENGERS.")
     parser.add_argument('roadnet', help="The roadnet file which should INCLUDE SIDEWALKS.")
