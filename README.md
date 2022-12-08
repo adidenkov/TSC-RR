@@ -20,7 +20,12 @@ Check that the installation worked:
 python3 -c "import cityflow"
 ```
 
-3. Download the required data via:
+3. Install project dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Download the required data via:
 ```bash
 cd /src
 ./get-data.sh

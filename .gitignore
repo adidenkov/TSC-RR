@@ -1,2 +1,8 @@
 # Downloaded data
 data
+
+# Python scripts byproduct
+__pycache__
+
+# Evaluation results
+results_*.json

@@ -1,3 +1,4 @@
 {
-    "image": "cityflower:latest"
+    "image": "cityflower:latest",
+    "runArgs": ["--rm"]
 }
