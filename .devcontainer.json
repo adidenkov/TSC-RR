@@ -1,4 +1,5 @@
 {
     "image": "cityflower:latest",
-    "runArgs": ["--rm"]
+    "runArgs": ["--rm"],
+    "postCreateCommand": "pip install -r requirements.txt"
 }

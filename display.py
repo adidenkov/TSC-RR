@@ -16,16 +16,17 @@ def table(results, precision=2):
     @param precision: number of decimal places to display.
     @returns: table of results.
     '''
-    column_names = pd.DataFrame([[metric, t]
+    names = [[metric, t]
         for metric, types in next(iter(results.values())).items()
-            for t in types.keys()],
-        columns=["Scenario", ""])
+            for t in types.keys()]
+    column_names = pd.DataFrame(names, columns=["Scenario", ""])
 
-    rows = [[f"{statistics.mean(val):.{precision}f}"
-        f"{f'±{statistics.stdev(val):.{precision}f}' if len(val) > 1 else ''}"
-        for types in result.values()
-            for val in types.values()]
-        for scenario, result in results.items()]
+    rows = map(lambda l: map(lambda val:
+        f"{f'{statistics.mean(val):.{precision}f}' if val else '--'}"
+        f"{f'±{statistics.stdev(val):.{precision}f}' if len(val) > 1 else ''}", l),
+        [[result[mtr][typ]
+            for mtr, typ in names]
+                for result in results.values()])
 
     index = results.keys()
 

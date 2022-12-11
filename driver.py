@@ -52,7 +52,8 @@ def run_scenario(scenario, trials=5, callback=None):
             eng.next_step()
 
         # Save statistics
-        results[name]['Travel time']['Average'].append(eng.get_average_travel_time())
+        for typ, avg in eng.get_average_travel_time_by_type().items():
+            results[name]['Travel time'][typ.capitalize()].append(avg)
         if callback:
             callback(results)
 

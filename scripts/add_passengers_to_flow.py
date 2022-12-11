@@ -27,6 +27,7 @@ if __name__ == "__main__":
                     vehicle_info["vehicle"]["passengers"] = random.randint(1,4)
                 else:
                     vehicle_info["vehicle"]["passengers"] = 1
+            vehicle_info["vehicle"]["type"] = "car"
             if args.nudge:
                 nudge = random.randint(-10,10)
                 for key in ["startTime", "endTime"]:
