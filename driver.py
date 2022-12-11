@@ -23,7 +23,7 @@ with open("config.json", 'r') as infile:
 results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
 
-def run_scenario(scenario, trials=5):
+def run_scenario(scenario, trials=5, callback=None):
     ''' Run the simulation on a given roadnet+flow.
     @param scenario: relative path of the containing directory.
     '''
@@ -53,6 +53,8 @@ def run_scenario(scenario, trials=5):
 
         # Save statistics
         results[name]['Travel time']['Average'].append(eng.get_average_travel_time())
+        if callback:
+            callback(results)
 
     print("done")
 
@@ -86,20 +88,21 @@ if not os.path.exists(DATA):
 # Load a previous result
 if args.input:
     results = load(args.input)
+save_results = (lambda results: save(args.output, results)) if args.output else None
 
 try:
     # Run only the requested scenarios
     if args.scenario:
         for dataset in args.scenario:
             if os.path.exists(dataset):
-                run_scenario(dataset, args.trials)
+                run_scenario(dataset, args.trials, save_results)
             else:
                 print(f"Scenario not found: {dataset}")
 
     # Find all downloaded datasets
     else:
         for directory in sorted(next(os.walk(DATA))[1], key=order):
-            run_scenario(f"{DATA}/{directory}", args.trials)
+            run_scenario(f"{DATA}/{directory}", args.trials, save_results)
 
 # Save and display partial results
 except KeyboardInterrupt:
@@ -110,7 +113,4 @@ print()
 if not results:
     print("No scenarios were run")
     sys.exit(1)
-if results and args.output:
-    save(args.output, results)
-    print(f"Saved results to '{args.output}'\n")
 print(table(results))
