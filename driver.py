@@ -7,7 +7,7 @@ import os
 import shlex
 import subprocess
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 
 from display import load, save, table
@@ -22,6 +22,22 @@ with open("config.json", 'r') as infile:
 # Locally stored results, combination of all runs
 results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
+
+# TODO: Do this more efficiently through CityFlow
+cumul_vehicles, cumul_waiting = dict(), Counter()
+def wait_time_callback(eng, includeWaiting=True):
+    global cumul_vehicles, cumul_waiting
+    types = eng.get_vehicle_type(includeWaiting)
+    waiting = set(eng.get_vehicles(includeWaiting)) - set(dict(filter(
+        lambda vs: vs[1] >= 0.1, eng.get_vehicle_speed().items())).keys())
+    cumul_vehicles = dict(cumul_vehicles, **types)
+    cumul_waiting += Counter(types[v] for v in waiting)
+
+def get_average_wait_time_by_type(eng):
+    wait = {t: (cumul_waiting[t], n) for t, n in Counter(cumul_vehicles.values()).items()}
+    cws, ns = zip(*wait.values())
+    wait['average'] = (sum(cws), sum(ns))
+    return {t: cw/n for t, (cw, n) in wait.items()}
 
 def run_scenario(scenario, trials=5, callback=None):
     ''' Run the simulation on a given roadnet+flow.
@@ -47,13 +63,18 @@ def run_scenario(scenario, trials=5, callback=None):
             f"{scenario}/flow.json -o {scenario}/flow-pass.json --random -s {i} --nudge"))
 
         # Run the simulation
+        global cumul_vehicles, cumul_waiting
+        cumul_vehicles, cumul_waiting = dict(), Counter()
         eng = cityflow.Engine(f"{scenario}/config.json")
         for _ in range(3600):
             eng.next_step()
+            wait_time_callback(eng)
 
         # Save statistics
         for typ, avg in eng.get_average_travel_time_by_type().items():
             results[name]['Travel time'][typ.capitalize()].append(avg)
+        for typ, avg in get_average_wait_time_by_type(eng).items():
+            results[name]['Wait time'][typ.capitalize()].append(avg)
         if callback:
             callback(results)
 

@@ -16,9 +16,11 @@ def table(results, precision=2):
     @param precision: number of decimal places to display.
     @returns: table of results.
     '''
-    names = [[metric, t]
+    key1 = lambda x: 'z' if x.startswith('Average') else x
+    key2 = lambda x: tuple(map(key1, x))
+    names = sorted(([metric, t]
         for metric, types in next(iter(results.values())).items()
-            for t in types.keys()]
+            for t in types.keys()), key=key2)
     column_names = pd.DataFrame(names, columns=["Scenario", ""])
 
     rows = map(lambda l: map(lambda val:
