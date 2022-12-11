@@ -28,13 +28,15 @@ cumul_vehicles, cumul_waiting = dict(), Counter()
 def wait_time_callback(eng, includeWaiting=True):
     global cumul_vehicles, cumul_waiting
     types = eng.get_vehicle_type(includeWaiting)
+    passgs = eng.get_vehicle_passengers(includeWaiting)
     waiting = set(eng.get_vehicles(includeWaiting)) - set(dict(filter(
         lambda vs: vs[1] >= 0.1, eng.get_vehicle_speed().items())).keys())
-    cumul_vehicles = dict(cumul_vehicles, **types)
-    cumul_waiting += Counter(types[v] for v in waiting)
+    cumul_vehicles = dict(cumul_vehicles, **{v: (t, passgs[v]) for v, t in types.items()})
+    cumul_waiting += Counter(types[v] for v in waiting for _ in range(passgs[v]))
 
 def get_average_wait_time_by_type(eng):
-    wait = {t: (cumul_waiting[t], n) for t, n in Counter(cumul_vehicles.values()).items()}
+    wait = {t: (cumul_waiting[t], n) for t, n in
+        Counter(t for t, p in cumul_vehicles.values() for _ in range(p)).items()}
     cws, ns = zip(*wait.values())
     wait['average'] = (sum(cws), sum(ns))
     return {t: cw/n for t, (cw, n) in wait.items()}
