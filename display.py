@@ -7,6 +7,8 @@ import statistics
 import sys
 import pandas as pd
 
+from collections import defaultdict
+
 
 def table(results, precision=2):
     ''' Create a display-able table from raw results.
@@ -46,7 +48,7 @@ def load(filename):
     @return: nested dictionary of results.
     '''
     with open(filename, 'r') as f:
-        return json.load(f)
+        return defaultdict(lambda: defaultdict(lambda: defaultdict(list)), json.load(f))
 
 
 if __name__ == "__main__":

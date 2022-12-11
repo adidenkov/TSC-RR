@@ -10,7 +10,7 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 
-from display import save, table
+from display import load, save, table
 
 DATA = "data"
 
@@ -35,10 +35,12 @@ def run_scenario(scenario, trials=5):
     config["dir"] = f"{scenario}/"
     config["flowFile"] = "flow-pass.json"
     for i in range(trials):
+        print('.', end='', flush=True)
+        if len(results[name]['Travel time']['Average']) > i:
+            continue
         config["seed"] = i
         with open(f"{scenario}/config.json", 'w') as outfile:
             json.dump(config, outfile)
-        print('.', end='', flush=True)
 
         # Create the scenarios
         subprocess.run(shlex.split(f"python3 ./scripts/add_passengers_to_flow.py "
@@ -63,12 +65,14 @@ def order(dataset):
 # Parse arguments
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-s', '--scenario', action='append', nargs='*', metavar="DIR",
-    help=f"run using data in this directory\nExample: {DATA}/1-example\nDefault: run all")
+    help=f"run with data in this directory\nExample: {DATA}/1-example\nDefault: run all")
 parser.add_argument('-o', '--output', action='store', nargs='?', metavar="JSON",
     const=f"results_{datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json",
     help=f"save results to this file\nDefault: results_date_time.json")
+parser.add_argument('-i', '--input', metavar="JSON",
+    help=f"continue from a previous result")
 parser.add_argument('-t', '--trials', type=int, default=5,
-    help="number of trials to run for each scenario")
+    help=f"trials to run for each scenario")
 args = parser.parse_args()
 if args.scenario:
     args.scenario = sorted(set(s.rstrip('/') for l in args.scenario for s in l), key=order)
@@ -78,6 +82,10 @@ if not os.path.exists(DATA):
     print(f"Missing directory: {DATA}")
     print(f"Make sure to run ./get-data.sh")
     sys.exit(1)
+
+# Load a previous result
+if args.input:
+    results = load(args.input)
 
 try:
     # Run only the requested scenarios
