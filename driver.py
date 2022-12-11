@@ -42,7 +42,7 @@ def run_scenario(scenario, trials=5):
 
         # Create the scenarios
         subprocess.run(shlex.split(f"python3 ./scripts/add_passengers_to_flow.py "
-            f"{scenario}/flow.json -o {scenario}/flow-pass.json --random -s {i}"))
+            f"{scenario}/flow.json -o {scenario}/flow-pass.json --random -s {i} --nudge"))
 
         # Run the simulation
         eng = cityflow.Engine(f"{scenario}/config.json")
