@@ -5,13 +5,14 @@ import argparse
 import random
 
 if __name__ == "__main__":
-    random.seed(5834)
     parser = argparse.ArgumentParser(description='Add "passengers" parameter to all vehicles in flow file.')
     parser.add_argument('input', help="The original flow file to which passengers will be added.")
     parser.add_argument('-o', '--output', help="The name of the new flow file (default=<input>_passengers.json).")
+    parser.add_argument('-s', '--seed', type=int, default=5834, help="Value of the random seed.")
     parser.add_argument('--random', action="store_true", help="# passengers will be random number between 1 and 4 (inclusive).")
 
     args = parser.parse_args()
+    random.seed(args.seed)
 
     if args.output is None:
         args.output = args.input.replace(".json", "_") + "passengers.json"

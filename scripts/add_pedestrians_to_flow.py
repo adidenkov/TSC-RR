@@ -14,14 +14,15 @@ def get_available_sidewalks(current_sidewalk, roadnet, exclude_ids):
 
 
 if __name__ == "__main__":
-    random.seed(5834)
     parser = argparse.ArgumentParser(description='Adds random pedestrian flows on sidewalks.')
     parser.add_argument('input', help="The original flow file which should INCLUDE PASSENGERS.")
     parser.add_argument('roadnet', help="The roadnet file which should INCLUDE SIDEWALKS.")
     parser.add_argument('-o', '--output', help="The name of the new flow file (default=<input>_pedestrians.json).")
     parser.add_argument('-n', '--number', type=int, default=1, help="# of pedestrian flows that will be added.")
+    parser.add_argument('-s', '--seed', type=int, default=5834, help="Value of the random seed.")
 
     args = parser.parse_args()
+    random.seed(args.seed)
 
     if args.output is None:
         args.output = args.input.replace(".json", "_") + "pedestrians.json"

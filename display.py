@@ -3,11 +3,12 @@
 import argparse
 import glob
 import json
+import statistics
 import sys
 import pandas as pd
 
 
-def table(results, precision=3):
+def table(results, precision=2):
     ''' Create a display-able table from raw results.
     @param results: nested dictionary of results.
     @param precision: number of decimal places to display.
@@ -18,7 +19,8 @@ def table(results, precision=3):
             for t in types.keys()],
         columns=["Scenario", ""])
 
-    rows = [[round(val, precision)
+    rows = [[f"{statistics.mean(val):.{precision}f}"
+        f"{f'±{statistics.stdev(val):.{precision}f}' if len(val) > 1 else ''}"
         for types in result.values()
             for val in types.values()]
         for scenario, result in results.items()]
@@ -35,7 +37,7 @@ def save(filename, results):
     @param results: nested dictionary of results.
     '''
     with open(filename, 'w') as f:
-        print(json.dumps(results), file=f)
+        print(json.dumps(results, indent='\t'), file=f)
 
 
 def load(filename):
@@ -51,6 +53,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('filename', nargs='?',
         help="Results file to use (defaults to most-recent)")
+    parser.add_argument('-p', '--precision', type=int, default=2,
+        help="Number of decimals to display  (defaults to 3)")
     args = parser.parse_args()
     try:
         filename = args.filename or sorted(glob.glob("results_*.json"))[-1]
@@ -58,4 +62,4 @@ if __name__ == "__main__":
         print(f"No results files found")
         sys.exit(1)
     print(f"Loading results from '{filename}'\n")
-    print(table(load(filename)))
+    print(table(load(filename), args.precision))
