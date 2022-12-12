@@ -9,7 +9,8 @@
     "minGap": 0.5,
     "maxSpeed": 1.67,
     "headwayTime": 1.0,
-    "passengers": 1
+    "passengers": 1,
+    "type": "pedestrian"
   },
   "route": [],
   "interval": 50.0,

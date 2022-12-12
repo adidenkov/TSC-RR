@@ -43,9 +43,13 @@ def get_average_wait_time_by_type(eng, per_vehicle=False):
     wait['average'] = (sum(cws), sum(ns))
     return {t: cw/n for t, (cw, n) in wait.items()}
 
-def run_scenario(scenario, trials=5, callback=None):
+def run_scenario(scenario, trials=5, callback=None, bus=False, pedestrian=False):
     ''' Run the simulation on a given roadnet+flow.
     @param scenario: relative path of the containing directory.
+    @param trials: number of trials to run for the scenario.
+    @param callback: function of the result to call after each trial.
+    @param bus: add buses to the simulation.
+    @param pedestrian: add pedestrians to the simulation.
     '''
     scenario = scenario.rstrip('/')
     name = scenario.split('/')[-1]
@@ -54,17 +58,34 @@ def run_scenario(scenario, trials=5, callback=None):
     # Generate config file
     config["dir"] = f"{scenario}/"
     config["flowFile"] = "flow-out.json"
+    scenario = os.path.abspath(scenario)
     for i in range(trials):
         print('.', end='', flush=True)
         if name in results and len(results[name]['Travel time']['Average'][0]) > i:
             continue
         config["seed"] = i
-        with open(f"{scenario}/config.json", 'w') as outfile:
-            json.dump(config, outfile)
 
         # Create the scenarios
-        subprocess.run(shlex.split(f"python3 ./scripts/add_passengers_to_flow.py "
-            f"{scenario}/flow.json -o {scenario}/{config['flowFile']} --random -s {i} --nudge"))
+        subprocess.run(shlex.split(f"python3 scripts/add_passengers_to_flow.py "
+            f"{scenario}/flow.json -o {scenario}/{config['flowFile']} --random -s {i} --nudge"),
+            stdout=subprocess.DEVNULL)
+        if bus:
+            subprocess.run(shlex.split(f"python3 scripts/add_buses_to_flow.py "
+                f"{scenario}/{config['flowFile']} -o {scenario}/{config['flowFile']} -s {i} -p 10"),
+                stdout=subprocess.DEVNULL)
+        if pedestrian:
+            config["roadnetFile"] = "roadnet-out.json"
+            subprocess.run(shlex.split(f"python3 scripts/add_pedestrians_to_roadnet.py "
+                f"{scenario}/roadnet.json -o {scenario}/{config['roadnetFile']}"),
+                stdout=subprocess.DEVNULL)
+            subprocess.run(shlex.split(f"python3 scripts/add_pedestrians_to_flow.py "
+                f"{scenario}/{config['flowFile']} {scenario}/{config['roadnetFile']} "
+                f"-o {scenario}/{config['flowFile']} -s {i} -f 1"),
+                stdout=subprocess.DEVNULL)
+        config["laneChange"] = pedestrian
+
+        with open(f"{scenario}/config.json", 'w') as outfile:
+            json.dump(config, outfile)
 
         # Run the simulation
         global cumul_vehicles, cumul_waiting, cumul_waiting_v
@@ -102,9 +123,13 @@ parser.add_argument('-i', '--input', metavar="JSON",
     help=f"continue from a previous result")
 parser.add_argument('-t', '--trials', type=int, default=5,
     help=f"trials to run for each scenario")
+parser.add_argument('--replay', action="store_true", help="save a replay file")
+parser.add_argument('--bus', action="store_true", help="add buses to the simulation")
+parser.add_argument('--pedestrian', action="store_true", help="add pedestrians to the simulation")
 args = parser.parse_args()
 if args.scenario:
     args.scenario = sorted(set(s.rstrip('/') for l in args.scenario for s in l), key=order)
+config["saveReplay"] = args.replay
 
 # Warn about missing data
 if not os.path.exists(DATA):
@@ -125,14 +150,14 @@ try:
     if args.scenario:
         for dataset in args.scenario:
             if os.path.exists(dataset):
-                run_scenario(dataset, args.trials, save_results)
+                run_scenario(dataset, args.trials, save_results, args.bus, args.pedestrian)
             else:
                 print(f"Scenario not found: {dataset}")
 
     # Find all downloaded datasets
     else:
         for directory in sorted(next(os.walk(DATA))[1], key=order):
-            run_scenario(f"{DATA}/{directory}", args.trials, save_results)
+            run_scenario(f"{DATA}/{directory}", args.trials, save_results, args.bus, args.pedestrian)
 
 # Save and display partial results
 except KeyboardInterrupt:

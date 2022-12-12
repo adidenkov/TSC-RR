@@ -3,8 +3,11 @@ import sys
 import json
 import argparse
 import math
+import os
 
 from copy import deepcopy
+
+script_dir = os.path.dirname(__file__)
 
 # Steps:
 #   1. Find intersections where virtual=false (only visible intersections)
@@ -288,17 +291,17 @@ if __name__ == "__main__":
     if args.output is None:
         args.output = args.input.replace(".json", "_") + "sidewalks.json"
 
-    stdsi = open("standard_sidewalk_intersection.json", "r")
+    stdsi = open(f"{script_dir}/standard_sidewalk_intersection.json", "r")
     standard_sidewalk_intersection = json.load(stdsi)
     stdsi.close()
     # print(standard_sidewalk_intersection)
 
-    stds = open("standard_sidewalk.json", "r")
+    stds = open(f"{script_dir}/standard_sidewalk.json", "r")
     standard_sidewalk = json.load(stds)
     stds.close()
     # print(standard_sidewalk)
 
-    stdrl = open("standard_roadlink.json", "r")
+    stdrl = open(f"{script_dir}/standard_roadlink.json", "r")
     standard_roadlink = json.load(stdrl)
     stdrl.close()
 
@@ -749,3 +752,4 @@ if __name__ == "__main__":
 
         with open(args.output, "w") as o:
             json.dump(roadnet_json, o, indent=2)
+            print(f"Added sidewalks")

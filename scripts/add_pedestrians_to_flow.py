@@ -3,7 +3,10 @@ import sys
 import json
 import argparse
 import random
+import os
 from copy import deepcopy
+
+script_dir = os.path.dirname(__file__)
 
 def get_available_sidewalks(current_sidewalk, roadnet, exclude_ids):
     next_intersection_id = current_sidewalk["endIntersection"]
@@ -19,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument('roadnet', help="The roadnet file which should INCLUDE SIDEWALKS.")
     parser.add_argument('-o', '--output', help="The name of the new flow file (default=<input>_pedestrians.json).")
     parser.add_argument('-n', '--number', type=int, default=1, help="# of pedestrian flows that will be added.")
+    parser.add_argument('-f', '--fraction', type=float, default=0.5, help="%% of pedestrian flows that will be added.")
     parser.add_argument('-s', '--seed', type=int, default=5834, help="Value of the random seed.")
 
     args = parser.parse_args()
@@ -27,7 +31,7 @@ if __name__ == "__main__":
     if args.output is None:
         args.output = args.input.replace(".json", "_") + "pedestrians.json"
 
-    stdp = open("standard_pedestrian.json", "r")
+    stdp = open(f"{script_dir}/standard_pedestrian.json", "r")
     standard_pedestrian = json.load(stdp)
     stdp.close()
 
@@ -45,7 +49,8 @@ if __name__ == "__main__":
             sidewalk_ids = [sidewalk_dict[x]["id"] for x in sidewalk_dict]
 
 
-            for i in range(args.number):
+            num = max(args.number, round(len(flow_json)*args.fraction))
+            for i in range(num):
                 # Build new route:
                 # 1. Pick random starting sidewalk
                 # 2. Pick random connected sidewalk that is not in route
@@ -95,4 +100,4 @@ if __name__ == "__main__":
         
         with open(args.output, "w") as o:
             json.dump(flow_json, o)
-
+            print(f"Added {num} pedestrian flows")

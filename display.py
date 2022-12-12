@@ -62,6 +62,8 @@ if __name__ == "__main__":
         help="Number of decimals to display  (defaults to 3)")
     parser.add_argument('--per-vehicle', action="store_true",
         help="Legacy per-vehicle averaging scheme")
+    parser.add_argument('--latex', action="store_true",
+        help="Display in LaTeX-ready format")
     args = parser.parse_args()
     try:
         filename = args.filename or sorted(glob.glob("results_*.json"))[-1]
@@ -69,4 +71,8 @@ if __name__ == "__main__":
         print(f"No results files found")
         sys.exit(1)
     print(f"Loading results from '{filename}'\n")
-    print(table(load(filename), args.precision, args.per_vehicle))
+    tab = table(load(filename), args.precision, args.per_vehicle)
+    if args.latex:
+        name = filename.rstrip('.json')
+        tab = tab.to_latex(caption=name, label=f"tab:{name}")
+    print(tab)
