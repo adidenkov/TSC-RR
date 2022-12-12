@@ -64,6 +64,9 @@ def run_scenario(scenario, trials=5, callback=None, bus=False, pedestrian=False)
         if name in results and len(results[name]['Travel time']['Average'][0]) > i:
             continue
         config["seed"] = i
+        if config["saveReplay"]:
+            config["roadnetLogFile"] = f"replay_roadnet_{i}.json"
+            config["replayLogFile"] = f"replay_{i}.txt"
 
         # Create the scenarios
         subprocess.run(shlex.split(f"python3 scripts/add_passengers_to_flow.py "
@@ -71,7 +74,7 @@ def run_scenario(scenario, trials=5, callback=None, bus=False, pedestrian=False)
             stdout=subprocess.DEVNULL)
         if bus:
             subprocess.run(shlex.split(f"python3 scripts/add_buses_to_flow.py "
-                f"{scenario}/{config['flowFile']} -o {scenario}/{config['flowFile']} -s {i} -p 10"),
+                f"{scenario}/{config['flowFile']} -o {scenario}/{config['flowFile']} -s {i} -p 10 -f 0.1"),
                 stdout=subprocess.DEVNULL)
         if pedestrian:
             config["roadnetFile"] = "roadnet-out.json"
@@ -80,7 +83,7 @@ def run_scenario(scenario, trials=5, callback=None, bus=False, pedestrian=False)
                 stdout=subprocess.DEVNULL)
             subprocess.run(shlex.split(f"python3 scripts/add_pedestrians_to_flow.py "
                 f"{scenario}/{config['flowFile']} {scenario}/{config['roadnetFile']} "
-                f"-o {scenario}/{config['flowFile']} -s {i} -f 1"),
+                f"-o {scenario}/{config['flowFile']} -s {i} -f 2.5"),
                 stdout=subprocess.DEVNULL)
         config["laneChange"] = pedestrian
 

@@ -38,6 +38,7 @@ if __name__ == "__main__":
     in_flow_file = args.input
     with open(in_flow_file, "r") as f:
         flow_json = json.load(f)
+        continuous = flow_json[0]['endTime'] == -1
         
         with open(args.roadnet, "r") as roadnet_file:
             roadnet = json.load(roadnet_file)
@@ -89,6 +90,10 @@ if __name__ == "__main__":
 
                 new_pedestrian = deepcopy(standard_pedestrian)
                 new_pedestrian["route"].extend(new_route)
+                if not continuous:
+                    time = random.randint(0, 3599)
+                    new_pedestrian["startTime"] = time
+                    new_pedestrian["endTime"] = time
                 flow_json.append(new_pedestrian)
 
             # # Fix existing routes so that they go through splits

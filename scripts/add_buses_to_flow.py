@@ -26,12 +26,11 @@ if __name__ == "__main__":
         num = min(max(args.number, round(len(flow_json)*args.fraction)), len(flow_json))
         copy_to_busses = random.sample(flow_json, num)
         for vehicle_info in copy_to_busses:
+            scale = args.passenger_scale * (0.5 + random.random())
             new_bus = deepcopy(vehicle_info)
             new_bus["vehicle"]["length"] = 15
-            new_bus["vehicle"]["passengers"] = (int)(args.passenger_scale * new_bus["vehicle"]["passengers"])
+            new_bus["vehicle"]["passengers"] = (int)(scale * new_bus["vehicle"]["passengers"])
             new_bus["vehicle"]["type"] = "bus"
-            new_bus["interval"] = 10 * new_bus["interval"]
-            new_bus["endTime"] = -1
             flow_json.append(new_bus)
         with open(args.output, "w") as o:
             json.dump(flow_json, o)
