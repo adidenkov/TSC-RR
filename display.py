@@ -10,7 +10,7 @@ import pandas as pd
 from collections import defaultdict
 
 
-def table(results, precision=2):
+def table(results, precision=2, per_vehicle=False):
     ''' Create a display-able table from raw results.
     @param results: nested dictionary of results.
     @param precision: number of decimal places to display.
@@ -24,8 +24,8 @@ def table(results, precision=2):
     column_names = pd.DataFrame(names, columns=["Scenario", ""])
 
     rows = map(lambda l: map(lambda val:
-        f"{f'{statistics.mean(val):.{precision}f}' if val else '--'}"
-        f"{f'±{statistics.stdev(val):.{precision}f}' if len(val) > 1 else ''}", l),
+        f"{f'{statistics.mean(val[per_vehicle]):.{precision}f}' if val[per_vehicle] else '--'}"
+        f"{f'±{statistics.stdev(val[per_vehicle]):.{precision}f}' if len(val[per_vehicle]) > 1 else ''}", l),
         [[result[mtr][typ]
             for mtr, typ in names]
                 for result in results.values()])
@@ -51,7 +51,7 @@ def load(filename):
     @return: nested dictionary of results.
     '''
     with open(filename, 'r') as f:
-        return defaultdict(lambda: defaultdict(lambda: defaultdict(list)), json.load(f))
+        return defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [[],[]])), json.load(f))
 
 
 if __name__ == "__main__":
@@ -60,6 +60,8 @@ if __name__ == "__main__":
         help="Results file to use (defaults to most-recent)")
     parser.add_argument('-p', '--precision', type=int, default=2,
         help="Number of decimals to display  (defaults to 3)")
+    parser.add_argument('--per-vehicle', action="store_true",
+        help="Legacy per-vehicle averaging scheme")
     args = parser.parse_args()
     try:
         filename = args.filename or sorted(glob.glob("results_*.json"))[-1]
@@ -67,4 +69,4 @@ if __name__ == "__main__":
         print(f"No results files found")
         sys.exit(1)
     print(f"Loading results from '{filename}'\n")
-    print(table(load(filename), args.precision))
+    print(table(load(filename), args.precision, args.per_vehicle))

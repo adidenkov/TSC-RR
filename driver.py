@@ -20,23 +20,25 @@ with open("config.json", 'r') as infile:
     config = json.load(infile)
 
 # Locally stored results, combination of all runs
-results = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+results = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: [[],[]])))
 
 
 # TODO: Do this more efficiently through CityFlow
-cumul_vehicles, cumul_waiting = dict(), Counter()
+cumul_vehicles, cumul_waiting, cumul_waiting_v = dict(), Counter(), Counter()
 def wait_time_callback(eng, includeWaiting=True):
-    global cumul_vehicles, cumul_waiting
+    global cumul_vehicles, cumul_waiting, cumul_waiting_v
     types = eng.get_vehicle_type(includeWaiting)
     passgs = eng.get_vehicle_passengers(includeWaiting)
     waiting = set(eng.get_vehicles(includeWaiting)) - set(dict(filter(
         lambda vs: vs[1] >= 0.1, eng.get_vehicle_speed().items())).keys())
     cumul_vehicles = dict(cumul_vehicles, **{v: (t, passgs[v]) for v, t in types.items()})
     cumul_waiting += Counter(types[v] for v in waiting for _ in range(passgs[v]))
+    cumul_waiting_v += Counter(types[v] for v in waiting)
 
-def get_average_wait_time_by_type(eng):
-    wait = {t: (cumul_waiting[t], n) for t, n in
-        Counter(t for t, p in cumul_vehicles.values() for _ in range(p)).items()}
+def get_average_wait_time_by_type(eng, per_vehicle=False):
+    wait = {t: (cumul_waiting_v[t] if per_vehicle else cumul_waiting[t], n) for t, n in
+        Counter(t for t, p in cumul_vehicles.values()
+            for _ in range(1 if per_vehicle else p)).items()}
     cws, ns = zip(*wait.values())
     wait['average'] = (sum(cws), sum(ns))
     return {t: cw/n for t, (cw, n) in wait.items()}
@@ -51,10 +53,10 @@ def run_scenario(scenario, trials=5, callback=None):
 
     # Generate config file
     config["dir"] = f"{scenario}/"
-    config["flowFile"] = "flow-pass.json"
+    config["flowFile"] = "flow-out.json"
     for i in range(trials):
         print('.', end='', flush=True)
-        if len(results[name]['Travel time']['Average']) > i:
+        if name in results and len(results[name]['Travel time']['Average'][0]) > i:
             continue
         config["seed"] = i
         with open(f"{scenario}/config.json", 'w') as outfile:
@@ -62,21 +64,22 @@ def run_scenario(scenario, trials=5, callback=None):
 
         # Create the scenarios
         subprocess.run(shlex.split(f"python3 ./scripts/add_passengers_to_flow.py "
-            f"{scenario}/flow.json -o {scenario}/flow-pass.json --random -s {i} --nudge"))
+            f"{scenario}/flow.json -o {scenario}/{config['flowFile']} --random -s {i} --nudge"))
 
         # Run the simulation
-        global cumul_vehicles, cumul_waiting
-        cumul_vehicles, cumul_waiting = dict(), Counter()
+        global cumul_vehicles, cumul_waiting, cumul_waiting_v
+        cumul_vehicles, cumul_waiting, cumul_waiting_v = dict(), Counter(), Counter()
         eng = cityflow.Engine(f"{scenario}/config.json")
         for _ in range(3600):
             eng.next_step()
             wait_time_callback(eng)
 
         # Save statistics
-        for typ, avg in eng.get_average_travel_time_by_type().items():
-            results[name]['Travel time'][typ.capitalize()].append(avg)
-        for typ, avg in get_average_wait_time_by_type(eng).items():
-            results[name]['Wait time'][typ.capitalize()].append(avg)
+        for per_vehicle in range(2):
+            for typ, avg in eng.get_average_travel_time_by_type(per_vehicle).items():
+                results[name]['Travel time'][typ.capitalize()][per_vehicle].append(avg)
+            for typ, avg in get_average_wait_time_by_type(eng, per_vehicle).items():
+                results[name]['Wait time'][typ.capitalize()][per_vehicle].append(avg)
         if callback:
             callback(results)
 
@@ -111,7 +114,10 @@ if not os.path.exists(DATA):
 
 # Load a previous result
 if args.input:
-    results = load(args.input)
+    try:
+        results = load(args.input)
+    except FileNotFoundError:
+        print(f"File {args.input} not found; starting from scratch\n")
 save_results = (lambda results: save(args.output, results)) if args.output else None
 
 try:
