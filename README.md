@@ -1,6 +1,13 @@
 # Towards Robustness and Realism in Traffic Signal Control
 
-[TODO: short description]
+Term project for [CS5834](https://cs.vt.edu/Graduate/Courses/GradCourseDescriptions.html#CS5834).
+Introduces additional features to the [CityFlow](https://github.com/cityflow-project/CityFlow) simulation that more accurately model real-world situations:
+
+* Variable number of passengers in each vehicle
+  * Metrics updated to account for each person's travel/wait times
+  * Allows prioritizing high-occupancy vehicles such as buses
+* Pedestrians and sidewalks
+  * Allows developing algorithms friendly to every type of commuter
 
 
 ## Installation
@@ -37,3 +44,5 @@ cd /src
 Run `driver.py`.
 This should produce replay files for each subdirectory inside of `data`.
 These can be viewed using CityFlow's frontend.
+
+To reproduce results shown in the report, use `./run-all.sh`.
